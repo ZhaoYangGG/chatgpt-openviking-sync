@@ -182,6 +182,7 @@
           cache: "no-store"
         });
       } catch (error) {
+        clearTimeout(timeout);
         const message = error && error.name === "AbortError"
           ? "连接 OpenViking 超时"
           : `无法连接 OpenViking：${core.safeErrorMessage(error)}`;
@@ -190,8 +191,6 @@
           retryable: true,
           requestUrl
         });
-      } finally {
-        if (timeout) clearTimeout(timeout);
       }
 
       let payload = null;
@@ -199,7 +198,12 @@
         const text = await response.text();
         payload = text ? JSON.parse(text) : null;
       } catch (_error) {
+        if (controller && controller.signal.aborted) {
+          throw new OpenVikingError("读取 OpenViking 响应超时", { code: "NETWORK_ERROR", retryable: true, requestUrl });
+        }
         payload = null;
+      } finally {
+        if (timeout) clearTimeout(timeout);
       }
 
       if (!response.ok || payload && payload.status === "error") {

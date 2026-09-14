@@ -25,7 +25,7 @@ test('packaging succeeds; private extras excluded; existing output refused',()=>
     assert.equal(audit(path.join(out,'source')).ok,true);
     assert.equal(fs.existsSync(path.join(out,'source/docs/evidence')),false);
     const b=run();assert.notEqual(b.status,0);assert.match(b.stderr,/Output already exists/);
-    for(const n of ['chatgpt-openviking-source.zip','chatgpt-openviking-v1-0.1.0.zip','chatgpt-openviking-v2-preview-0.2.0.zip']){
+    for(const n of ['chatgpt-openviking-source.zip','chatgpt-openviking-v2-0.2.1.zip']){
       const data=fs.readFileSync(path.join(out,n));assert.equal(data.readUInt32LE(0),0x04034b50);
       assert.equal(data.readUInt32LE(data.length-22),0x06054b50);
     }

@@ -86,6 +86,11 @@
             }
           }else if(old.metadataHash!==incoming.metadataHash){
             const previous=old.storedBytes;old.metadata=incoming.metadata;old.metadataHash=incoming.metadataHash;
+            if(old.status==='missing_time'&&incoming.metadata.createTimeDecimal){
+              old.status='queued';c.missingTimeCount=Math.max(0,(c.missingTimeCount||0)-1);
+              const pending={key:old.key,conversationKey,sequence:old.sequence,dispatchKey:[...conversationKey,old.sequence],contentHash:old.contentHash};
+              pending.storedBytes=size(pending);outbox.put(pending);budget.bytes+=pending.storedBytes;c.queuedCount++;
+            }
             old.storedBytes=size({...old,storedBytes:undefined});budget.bytes+=old.storedBytes-previous;messages.put(old);updated++;
           }
         }
@@ -100,6 +105,33 @@
       });
     }
     async getConversation(scope,id){return this.transaction(['conversations'],'readonly',tx=>req(tx.objectStore('conversations').get([scope,id])));}
+    async listConversations(scope){
+      return this.transaction(['conversations'],'readonly',tx=>req(tx.objectStore('conversations').getAll()).then(rows=>rows.filter(r=>r.scope===scope)));
+    }
+    async getRows(scope,id,keys){
+      return this.transaction(['messages'],'readonly',async tx=>Promise.all(keys.map(key=>req(tx.objectStore('messages').get([scope,id,key])))));
+    }
+    async updateSync(scope,id,patch,resolutions=[]){
+      return this.transaction(['conversations','messages','outbox','meta'],'readwrite',async tx=>{
+        const cs=tx.objectStore('conversations'),ms=tx.objectStore('messages'),os=tx.objectStore('outbox'),meta=tx.objectStore('meta');
+        const c=await req(cs.get([scope,id]));if(!c)return;
+        const budget=await req(meta.get('budget'))||{key:'budget',bytes:0},oldBytes=c.storedBytes||0;
+        for(const item of resolutions){
+          const key=[scope,id,item.id],row=await req(ms.get(key));
+          // Capture may have detected a revision while a network request was in flight.
+          if(!row||row.status==='conflict'||row.contentHash!==item.contentHash)continue;
+          const pending=await req(os.get(key));if(!pending)continue;
+          budget.bytes-=pending.storedBytes||0;os.delete(key);c.queuedCount=Math.max(0,c.queuedCount-1);
+          const before=row.storedBytes||0;row.status=item.status;
+          if(item.status==='conflict')c.conflictCount++;
+          if(item.status==='missing_time')c.missingTimeCount=(c.missingTimeCount||0)+1;
+          row.storedBytes=size({...row,storedBytes:undefined});ms.put(row);budget.bytes+=row.storedBytes-before;
+        }
+        Object.assign(c,patch);c.storedBytes=size({...c,storedBytes:undefined});budget.bytes+=c.storedBytes-oldBytes;
+        if(budget.bytes>this.maxBytes)throw Error('storage_capacity_reached');
+        cs.put(c);meta.put(budget);return c;
+      });
+    }
     async listOutbox(scope,id,limit=100){
       if(!Number.isInteger(limit)||limit<1||limit>500)throw Error('invalid_limit');
       return this.transaction(['outbox'],'readonly',tx=>new Promise((resolve,reject)=>{

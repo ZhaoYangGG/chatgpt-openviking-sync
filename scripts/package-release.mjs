@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {publicFiles,v1Files,v2Files} from './release-files.mjs';
+import {publicFiles,v2SyncFiles} from './release-files.mjs';
 import {audit} from './audit-public.mjs';
 
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -45,6 +45,8 @@ const pkg=JSON.parse(fs.readFileSync(path.join(source,'package.json'),'utf8'));
 delete pkg.scripts['sync:safari'];
 delete pkg.author;delete pkg.contributors;delete pkg.repository;delete pkg.homepage;delete pkg.bugs;
 fs.writeFileSync(path.join(source,'package.json'),JSON.stringify(pkg,null,2)+'\n');
+// Public source installs V2 by default. Preserve the private development root's V1 installation.
+fs.copyFileSync(path.join(source,'manifest.v2.json'),path.join(source,'manifest.json'));
 const result=audit(source);
 if(!result.ok) {
   console.error(JSON.stringify(result,null,2));
@@ -77,15 +79,13 @@ function zip(entries) {
   return Buffer.concat([...locals,cd,end]);
 }
 const read=file=>fs.readFileSync(path.join(source,file));
-const v1Version=JSON.parse(read('manifest.json')).version,v2Version=JSON.parse(read('manifest.v2-preview.json')).version;
+const v2Version=JSON.parse(read('manifest.v2.json')).version;
 const legal=['LICENSE','SECURITY.md','PRIVACY.md'].map(f=>[f,read(f)]);
 const bundles=[
   ['chatgpt-openviking-source.zip',publicFiles.map(f=>['chatgpt-openviking-sync/'+f,read(f)])],
-  [`chatgpt-openviking-v1-${v1Version}.zip`,[...v1Files.map(f=>[f,read(f)]),...legal,
-    ['INSTALL.txt',Buffer.from('V1 DOM sync preview. Configure your own OpenViking. Read SECURITY.md before enabling uploads. Unzip, then load this directory in Chrome developer mode.\n')]]],
-  [`chatgpt-openviking-v2-preview-${v2Version}.zip`,[['manifest.json',read('manifest.v2-preview.json')],
-    ...v2Files.map(f=>[f,read(f)]),...legal,
-    ['INSTALL.txt',Buffer.from('V2 LOCAL CAPTURE ONLY. No uploads. Page payload authenticity is unresolved. Unzip and load this directory in Chrome developer mode; refresh a non-sensitive test conversation. See SECURITY.md.\n')]]]
+  [`chatgpt-openviking-v2-${v2Version}.zip`,[['manifest.json',read('manifest.v2.json')],
+    ...v2SyncFiles.map(f=>[f,read(f)]),...legal,
+    ['INSTALL.txt',Buffer.from('V2 observed-range sync. Unzip and load in Chrome developer mode. Open settings, stop legacy uploaders, configure your own service and explicitly enable sync. Refresh a test conversation. Read SECURITY.md: signed messages do not authenticate a compromised page.\n')]]]
 ];
 const hashes=[];
 for(const [name,entries] of bundles) {

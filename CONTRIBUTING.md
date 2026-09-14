@@ -10,7 +10,7 @@ Node.js 20+：
 npm ci --ignore-scripts
 npm test
 npm run validate
-npm run build:v2-preview
+npm run build:v2
 ```
 
 在 Chrome 加载 V2 构建目录验证。自动测试通过不是实机验收；fake-indexeddb 不能作为 Chrome 进程重启证明。

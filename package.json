@@ -1,12 +1,13 @@
 {
   "name": "chatgpt-openviking-webextension",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "private": true,
-  "description": "Chrome extension: legacy OpenViking session sync and local-only structured capture preview.",
+  "description": "Chrome extension for observed ChatGPT conversation sync with source timestamps and best-effort deduplication.",
   "scripts": {
     "test": "node --test test/*.test.js",
     "validate": "node scripts/validate-extension.mjs",
     "build:v2-preview": "node scripts/build-v2-preview.mjs",
+    "build:v2": "node scripts/build-v2.mjs",
     "package:release": "node scripts/package-release.mjs",
     "test:release": "node --test scripts/release.test.mjs"
   },

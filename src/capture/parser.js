@@ -64,5 +64,14 @@
       conclusion:dom.size === 0 ? 'no_dom_ids' : [...dom].every(id=>api.has(id))
         ? 'all_current_dom_ids_match_api_subset' : 'differences_need_review'};
   }
-  return {parseDetail,compareDom,isId};
+  function parseText(body,expectedId){
+    const clock=globalThis.OpenVikingSourceTime||(typeof require==='function'?require('../shared/source-time'):null);
+    const {data,times}=clock.parseExact(body),result=parseDetail(data,expectedId);
+    for(const m of result.messages){
+      m.createTimeDecimal=times.get(m.sourceIndex+':create_time')??null;
+      m.updateTimeDecimal=times.get(m.sourceIndex+':update_time')??null;
+    }
+    return result;
+  }
+  return {parseDetail,parseText,compareDom,isId};
 });
