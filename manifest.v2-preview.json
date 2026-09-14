@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "OpenViking V2 · 采集层预览",
+  "version": "0.2.0",
+  "minimum_chrome_version": "111",
+  "description": "P1-a local capture preview. No OpenViking uploads.",
+  "permissions": ["activeTab", "storage"],
+  "background": {"service_worker": "src/background/v2-service-worker.js"},
+  "action": {"default_popup": "src/popup/v2-popup.html"},
+  "content_scripts": [
+    {"matches": ["https://chatgpt.com/*"], "js": ["src/capture/bridge.js"], "world": "MAIN", "run_at": "document_start"},
+    {"matches": ["https://chatgpt.com/*"], "js": ["src/capture/relay.js"], "world": "ISOLATED", "run_at": "document_start"}
+  ],
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'"}
+}

@@ -1,0 +1,15 @@
+.DS_Store
+dist/
+node_modules/
+*.log
+.env
+.env.*
+*.pem
+*.key
+*.zip
+*.crx
+coverage/
+# Private research and raw evidence are not public source.
+docs/*
+!docs/public/
+scripts/*desktop*

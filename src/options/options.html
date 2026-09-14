@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChatGPT to OpenViking 设置</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="mark" aria-hidden="true">OV</div>
+      <div>
+        <p class="eyebrow">ChatGPT × OpenViking</p>
+        <h1>自动同步设置</h1>
+        <p class="subtitle">每个 ChatGPT Conversation 对应一个 OpenViking Session。</p>
+      </div>
+    </header>
+
+    <form id="settings-form" novalidate>
+      <section class="card">
+        <div class="section-heading">
+          <div>
+            <h2>连接</h2>
+            <p>凭据保存在扩展自己的本地存储中，不会注入 ChatGPT 页面。</p>
+          </div>
+          <label class="switch-row">
+            <input id="enabled" name="enabled" type="checkbox">
+            <span class="switch" aria-hidden="true"></span>
+            <span>自动同步</span>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>OpenViking Server 地址</span>
+          <input id="server-url" name="serverUrl" type="url" required
+            placeholder="https://api.vikingdb.cn-beijing.volces.com/openviking"
+            spellcheck="false" autocomplete="url">
+          <small>填写控制台或自托管服务提供的 base URL；不要在末尾添加 <code>/api/v1</code> 或 <code>/health</code>。火山引擎云服务示例：<code>https://api.vikingdb.cn-beijing.volces.com/openviking</code></small>
+        </label>
+
+        <label class="field">
+          <span>API Key</span>
+          <input id="api-key" name="apiKey" type="password"
+            placeholder="输入 API Key" spellcheck="false" autocomplete="new-password">
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Agent ID <em>可选</em></span>
+            <input id="agent-id" name="agentId" type="text"
+              placeholder="例如 chatgpt-browser" spellcheck="false" autocomplete="off">
+            <small>云服务需要时通过 <code>X-OpenViking-Agent</code> 发送。</small>
+          </label>
+
+          <label class="field">
+            <span>认证方式</span>
+            <select id="auth-mode" name="authMode">
+              <option value="auto">自动（推荐）</option>
+              <option value="bearer">Authorization: Bearer</option>
+              <option value="x-api-key">X-API-Key</option>
+            </select>
+            <small>自动模式先按云服务文档使用 Bearer，仅在明确返回 401 时切换。</small>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading compact">
+          <div>
+            <h2>Session 自动整理</h2>
+            <p>插件把策略写入 Session；计时、commit、归档、摘要和长期记忆均由 OpenViking 服务端执行。</p>
+          </div>
+          <label class="switch-row">
+            <input id="auto-commit-enabled" name="autoCommitEnabled" type="checkbox">
+            <span class="switch" aria-hidden="true"></span>
+            <span>启用</span>
+          </label>
+        </div>
+
+        <details>
+          <summary>高级阈值</summary>
+          <div class="field-grid policy-grid">
+            <label class="field">
+              <span>消息数阈值</span>
+              <input id="message-threshold" type="number" min="2" max="10000" step="1">
+            </label>
+            <label class="field">
+              <span>空闲提交（秒）</span>
+              <input id="idle-timeout" type="number" min="30" max="604800" step="1">
+            </label>
+            <label class="field">
+              <span>Token 阈值</span>
+              <input id="token-threshold" type="number" min="100" max="1000000" step="100">
+            </label>
+            <label class="field">
+              <span>保留最近消息数</span>
+              <input id="keep-recent" type="number" min="0" max="1000" step="1">
+            </label>
+          </div>
+          <p class="field-help">默认策略：10000 pending tokens、20 条消息、空闲 86400 秒、保留最近 2 条物理消息、最短间隔 60 秒。设置保存后会 PATCH 插件已知的既有 Session；插件自身不会调用 commit。</p>
+        </details>
+      </section>
+
+      <section id="result" class="result" aria-live="polite" hidden></section>
+
+      <div class="actions">
+        <button id="save-button" class="primary" type="submit">保存并测试连接</button>
+        <span id="save-hint">保存时浏览器会请求访问该 OpenViking Server。</span>
+      </div>
+    </form>
+  </main>
+
+  <script src="../shared/core.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

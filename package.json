@@ -1,0 +1,20 @@
+{
+  "name": "chatgpt-openviking-webextension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension: legacy OpenViking session sync and local-only structured capture preview.",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "validate": "node scripts/validate-extension.mjs",
+    "build:v2-preview": "node scripts/build-v2-preview.mjs",
+    "package:release": "node scripts/package-release.mjs",
+    "test:release": "node --test scripts/release.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5"
+  }
+}

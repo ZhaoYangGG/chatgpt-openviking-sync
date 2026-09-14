@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChatGPT to OpenViking</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div class="mark">OV</div>
+      <div>
+        <h1>OpenViking Sync</h1>
+        <p>ChatGPT Conversation</p>
+      </div>
+    </header>
+
+    <section class="status-card">
+      <div class="status-line">
+        <span id="status-dot" class="dot idle"></span>
+        <strong id="status-label">正在检查…</strong>
+      </div>
+      <p id="status-detail">读取当前页面状态</p>
+      <dl>
+        <div>
+          <dt>Session</dt>
+          <dd id="session-id">—</dd>
+        </div>
+        <div>
+          <dt>消息 Peer</dt>
+          <dd id="peer-id">未启用</dd>
+        </div>
+        <div>
+          <dt>待同步</dt>
+          <dd id="queue-count">0</dd>
+        </div>
+        <div>
+          <dt>最近同步</dt>
+          <dd id="last-synced">—</dd>
+        </div>
+        <div>
+          <dt>最近归档</dt>
+          <dd id="last-archived">—</dd>
+        </div>
+      </dl>
+
+      <details class="details-panel">
+        <summary>展开同步详情</summary>
+        <dl>
+          <div><dt>Live / 累计</dt><dd id="message-counts">0 / 0</dd></div>
+          <div><dt>Pending tokens</dt><dd id="pending-tokens">0</dd></div>
+          <div><dt>Commit 次数</dt><dd id="commit-count">0</dd></div>
+          <div><dt>最近 commit</dt><dd id="last-commit">—</dd></div>
+          <div><dt>自动整理策略</dt><dd id="policy-status">—</dd></div>
+          <div><dt>Task</dt><dd id="task-status">—</dd></div>
+          <div><dt>Archive</dt><dd id="archive-uri">—</dd></div>
+          <div><dt>Memory diff</dt><dd id="memory-diff-uri">—</dd></div>
+          <div><dt>记忆提取</dt><dd id="memory-counts">0</dd></div>
+        </dl>
+      </details>
+    </section>
+
+    <p id="error-text" class="error" hidden></p>
+
+    <div class="buttons">
+      <button id="retry-button" type="button">立即重试</button>
+      <button id="settings-button" class="primary" type="button">设置</button>
+    </div>
+  </main>
+
+  <script src="../shared/core.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

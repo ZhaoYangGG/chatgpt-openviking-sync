@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>OpenViking P0 · 隔离去重实验</title>
+<link rel="stylesheet" href="../../poc/chrome-capture/popup.css">
+<main><h1>OpenViking P0 · 隔离去重实验</h1>
+<p>此页仅在明确点击时运行。沿用当前 V1 连接配置，密钥不显示、不导出、不传入 ChatGPT 页面。</p>
+<p>只创建 ov_p0_ 前缀的新测试 Session，关闭自动 commit 后写合成内容。不会删除或修改已有 Session。不会自动 commit 或提取记忆；归档后去重另行验证。</p>
+<button id="inspect">只读检查连接</button><button id="run" disabled>创建隔离 Session 并运行去重实验</button>
+<button id="export" disabled>导出无密钥实验报告</button>
+<pre id="output" role="status">等待检查。此页不是生产自动同步入口。</pre></main>
+<script src="../shared/core.js"></script><script src="../background/openviking-client.js"></script>
+<script src="p0-server-test.js"></script></html>

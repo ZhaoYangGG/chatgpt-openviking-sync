@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenViking P0 只读验证</title>
+<link rel="stylesheet" href="popup.css">
+<main>
+  <h1>Chrome P0 · 只读验证</h1>
+  <p>仅观察自然详情响应，不上传 OpenViking。首次安装后需刷新 ChatGPT 标签。</p>
+  <p>只保存最近 40 个事件 / 4 MiB。旧诊断记录会滚动覆盖，尚不是正式同步队列。</p>
+  <div class="actions"><button id="refresh">更新显示</button><button id="compare">核对当前 DOM 消息 ID</button><button id="export">导出诊断报告</button></div>
+  <label>实验检查点 <select id="label">
+    <option value="before_reply">发送前</option><option value="after_reply">回复完成后</option>
+    <option value="returned_to_chat">切走再切回</option><option value="reopened_tab">标签重开 / 恢复后</option>
+    <option value="after_reload">刷新后</option><option value="after_scroll">上滑加载后</option>
+  </select></label><button id="checkpoint">记录当前检查点</button>
+  <p id="status" role="status">正在读取本地诊断…</p>
+  <pre id="comparison"></pre>
+  <section id="records"></section>
+  <p>导出报告含会话/消息 ID、时间和模型，不含正文；不会自动上传。无请求记录不能证明没有新回复。</p>
+</main>
+<script src="parser.js"></script><script src="popup.js"></script>
+</html>
