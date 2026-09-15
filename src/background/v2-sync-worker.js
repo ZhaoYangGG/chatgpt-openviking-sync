@@ -1,6 +1,6 @@
 'use strict';
 importScripts('../shared/core.js','../shared/source-time.js','../capture/parser.js','../capture/signed-bridge.js',
- 'capture-auth.js','message-store.js','openviking-client.js','reconcile.js','sync-engine.js');
+ '../shared/sync-status.js','status-badge.js','capture-auth.js','message-store.js','openviking-client.js','reconcile.js','sync-engine.js');
 const store=new OpenVikingMessageStore.MessageStore();
 const CONFIG='ov_v2_config',CHANNELS='ov_v2_channels';
 const ready=Promise.all([
@@ -8,6 +8,16 @@ const ready=Promise.all([
  chrome.storage.session.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'})
 ]);
 let captureChain=Promise.resolve(),captureQueued=0,flushPromise=null;
+const badges=chrome.action&&chrome.tabs?OpenVikingStatusBadge.create({chrome,statusModel:OpenVikingSyncStatus,readStatus:status}):null;
+const updateSync=store.updateSync.bind(store);
+store.updateSync=async(...args)=>{const result=await updateSync(...args);badges?.schedule();return result;};
+chrome.tabs?.onActivated?.addListener(()=>badges?.schedule());
+chrome.tabs?.onUpdated?.addListener((_id,change)=>{if(change.url||change.status==='complete')badges?.schedule();});
+chrome.tabs?.onRemoved?.addListener(()=>badges?.schedule());
+chrome.storage.onChanged?.addListener((changes,area)=>{
+ if(area==='local'&&['ov_v2_config','v2SyncLastCapture','v2SyncCaptureError'].some(k=>k in changes))badges?.schedule();
+});
+badges?.schedule();
 async function getConfig(){
  await ready;
  const v=(await chrome.storage.local.get(CONFIG))[CONFIG]||{};

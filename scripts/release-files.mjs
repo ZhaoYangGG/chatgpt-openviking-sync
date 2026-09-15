@@ -15,6 +15,7 @@ export const v2Files = [
   'src/popup/v2-popup.html','src/popup/v2-popup.js','src/popup/v2-popup.css','src/popup/popup.css'
 ];
 export const v2SyncFiles = [
+  'src/shared/sync-status.js','src/background/status-badge.js','src/popup/v2-sync-popup.css',
   'src/shared/core.js','src/shared/source-time.js','src/capture/parser.js',
   'src/capture/signed-bridge.js','src/capture/signed-relay.js',
   'src/background/message-store.js','src/background/v2-sync-worker.js','src/background/openviking-client.js',
@@ -37,6 +38,7 @@ export const publicFiles = [...new Set([
   'test/core.test.js','test/state-store.test.js','test/openviking-client.test.js',
   'test/p0-capture.test.js','test/p0-reconcile.test.js','test/p0-server-test.test.js',
   'test/message-store.test.js','test/v2-worker.test.js','test/v2-sync.test.js','test/v2-integration.test.js',
+  'test/sync-status.test.js','test/v2-popup.test.js',
   'scripts/build-v2-preview.mjs','scripts/build-v2.mjs','scripts/validate-extension.mjs',
   'scripts/release-files.mjs','scripts/audit-public.mjs','scripts/package-release.mjs',
   'scripts/release.test.mjs'

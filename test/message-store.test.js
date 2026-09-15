@@ -69,3 +69,18 @@ test('V2 parser: multimodal_text and thoughts are explicit unsupported, not succ
     messages:['multimodal_text','thoughts'].map((type,i)=>({id:`x${i}`,author:{role:'assistant'},content:{content_type:type,parts:['synthetic']}}))},'c1');
   assert.equal(result.counts.unsupported,2);assert.equal(result.returnedPageSupported,false);assert.equal(result.messages.length,0);
 });
+test('V2 IDB: latest capture classification separates internal filters from unsupported content',async()=>{
+ const s=make(),d=detail();d.counts={system:1,hidden:2,internal:3};
+ d.omissions=[{role:'tool',type:'text',reason:'unsupported'},{role:'assistant',type:'thoughts',reason:'unsupported'},
+  {role:'assistant',type:'text',reason:'incomplete'},{role:'user',type:'multimodal_text',reason:'unsupported'}];
+ d.returnedPageSupported=false;await s.ingest('scope',d);
+ assert.deepEqual((await s.getConversation('scope','c1')).captureSummary,{system:1,hidden:2,internal:3,tools:1,thoughts:1,nonFinal:1,unsupported:1});
+ await s.ingest('scope',detail());const c=await s.getConversation('scope','c1');
+ assert.equal(c.captureSummary.unsupported,0);assert.equal(c.hasUnsupportedHistory,true);assert.equal(c.messageCount,2);
+});
+test('V2 IDB: missing-time to conflict remains one isolated record for status counters',async()=>{
+ const s=make();await s.ingest('scope',detail(['z']));const [row]=await s.getRows('scope','c1',['z']);
+ await s.updateSync('scope','c1',{},[{id:'z',contentHash:row.contentHash,status:'missing_time'}]);
+ await s.ingest('scope',detail(['z'],{text:'changed'}));const c=await s.getConversation('scope','c1');
+ assert.equal(c.missingTimeCount,0);assert.equal(c.conflictCount,1);assert.equal(c.queuedCount,0);
+});

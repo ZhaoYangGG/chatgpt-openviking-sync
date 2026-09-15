@@ -1,8 +1,22 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ChatGPT → OpenViking V2</title><link rel="stylesheet" href="popup.css">
-<body><main class="popup"><h1>ChatGPT → OpenViking</h1>
-<p>V2 · 自然详情范围同步 · 尽力去重</p><h2 id="headline">读取状态…</h2>
-<pre id="status" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
-<p>不是完整历史或逐轮实时保证。普通刷新在已测样本中可触发补录。</p>
-<button id="retry">立即对账重试</button><button id="settings">设置</button>
-</main><script src="v2-sync-popup.js"></script></body></html>
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChatGPT → OpenViking</title><link rel="stylesheet" href="v2-sync-popup.css"></head>
+<body><main>
+<header><div><h1>ChatGPT → OpenViking</h1><small id="version">V2 · 同步状态</small></div><button id="settings">设置</button></header>
+<section class="card" id="hero" data-tone="neutral" aria-live="polite">
+ <p id="conversation" class="conversation">当前会话</p>
+ <h2><span class="dot" aria-hidden="true"></span><span id="headline">正在读取状态…</span></h2>
+ <p id="detail">正在检查本机采集记录与上传确认。</p>
+ <div class="metrics"><div class="metric"><strong id="collected">—</strong><span>本机已采集</span></div><div class="metric"><strong id="confirmed">—</strong><span>远端已确认</span></div><div class="metric"><strong id="queued">—</strong><span>等待上传确认</span></div></div>
+</section>
+<section class="card"><h3 id="history-title">历史范围</h3><p id="history-detail">等待状态返回后判断。</p>
+ <div class="next"><h3>你现在需要做什么</h3><p id="next">暂时无需操作。</p></div>
+</section>
+<div class="actions"><button id="reload" disabled>刷新页面补录</button><button id="retry" disabled>重试上传</button></div>
+<p id="notice" role="status"></p>
+<p id="filtered" hidden></p>
+<section id="warnings" class="warnings" aria-label="需要注意" hidden></section>
+<dl><dt>最近采集</dt><dd id="observed">—</dd><dt>最近远端确认</dt><dd id="synced">—</dd><dt id="retry-label" hidden>计划重试</dt><dd id="retry-time" hidden>—</dd></dl>
+<details><summary>诊断详情</summary><pre id="status">尚未读取</pre></details>
+<p class="footnote">仅同步自然详情响应中的支持消息 · 非逐轮实时 · 跨设备尽力去重</p>
+</main><script src="../shared/sync-status.js"></script><script src="v2-sync-popup.js"></script></body></html>

@@ -79,6 +79,7 @@
               revisions.add(revision);budget.bytes+=revision.storedBytes;
             }
             if(old.status!=='conflict'){
+              if(old.status==='missing_time')c.missingTimeCount=Math.max(0,(c.missingTimeCount||0)-1);
               const previous=old.storedBytes;old.status='conflict';old.storedBytes=size({...old,storedBytes:undefined});
               messages.put(old);budget.bytes+=old.storedBytes-previous;c.conflictCount++;conflicts++;
               const pending=await req(outbox.get(old.key));
@@ -94,7 +95,15 @@
             old.storedBytes=size({...old,storedBytes:undefined});budget.bytes+=old.storedBytes-previous;messages.put(old);updated++;
           }
         }
-        Object.assign(c,{title:detail.title,lastObservedAt:observedAt,lastPage:detail.pageInfo,
+        const captureSummary={system:detail.counts?.system||0,hidden:detail.counts?.hidden||0,internal:detail.counts?.internal||0,
+          tools:0,thoughts:0,nonFinal:0,unsupported:0};
+        for(const item of detail.omissions||[]){
+          if(item.role==='tool')captureSummary.tools++;
+          else if(item.type==='thoughts')captureSummary.thoughts++;
+          else if(item.reason==='incomplete')captureSummary.nonFinal++;
+          else captureSummary.unsupported++;
+        }
+        Object.assign(c,{title:detail.title,lastObservedAt:observedAt,lastPage:detail.pageInfo,captureSummary,
           unsupportedCount:detail.omissions?.length||0,fullHistoryVerified:false,
           hasUnsupportedHistory:c.hasUnsupportedHistory===true||detail.returnedPageSupported!==true,
           collectionStatus:detail.returnedPageSupported?'observed_range':'unsupported_content'});
