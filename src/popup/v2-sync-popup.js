@@ -28,7 +28,8 @@ async function refresh(){
   text('status',JSON.stringify({conversationId:id,sessionId:c.sessionId||null,status:view.key,page:c.lastPage||null,
    captureSummary:c.captureSummary||null,conflicts:c.conflictCount||0,missingTime:c.missingTimeCount||0,
    remoteDuplicates:c.duplicateCount||0,remoteTimeDifferences:c.timeMismatchCount||0,
-   policyWarning:c.policyWarning||null,error:c.lastError||r.captureError?.error||null},null,2));
+   policyWarning:c.policyWarning||null,error:c.lastError||r.captureError?.error||null,
+   captureStage:r.captureError?.stage||null,captureStep:r.captureError?.step||null},null,2));
  }catch{
   readFailed=true;el('hero').dataset.tone='warn';text('headline','暂时无法读取状态');
   text('detail','后台未及时响应；已有数字可能过时，不能据此判断当前是否同步。');

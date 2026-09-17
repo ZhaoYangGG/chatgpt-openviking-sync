@@ -85,7 +85,7 @@ const bundles=[
   ['chatgpt-openviking-source.zip',publicFiles.map(f=>['chatgpt-openviking-sync/'+f,read(f)])],
   [`chatgpt-openviking-v2-${v2Version}.zip`,[['manifest.json',read('manifest.v2.json')],
     ...v2SyncFiles.map(f=>[f,read(f)]),...legal,
-    ['INSTALL.txt',Buffer.from('V2 observed-range sync. Unzip and load in Chrome developer mode. Open settings, stop legacy uploaders, configure your own service and explicitly enable sync. Refresh a test conversation. Read SECURITY.md: signed messages do not authenticate a compromised page.\n')]]]
+    ['INSTALL.txt',Buffer.from('ChatGPT → OpenViking '+v2Version+'\n\n安装：解压到固定目录，在 Chrome 扩展管理页开启开发者模式，选择“加载已解压的扩展程序”，选中含 manifest.json 的目录。\n配置：打开扩展设置，填写自己的服务地址与 API Key；停止其他旧版同步工具，确认数据来源说明后开启自动同步并保存。\n升级：保留已有扩展身份和本地数据，更新原安装目录后重新加载扩展。保存聊天草稿并等待回复完成，再刷新目标会话；如需较早历史，请按需上滑。无需删除或重建远端 Session。\n范围：同步 ChatGPT 自然加载的支持文字消息；图片附件不备份，不保证逐轮实时或跨设备绝对零重复。\n安全：请阅读 SECURITY.md 和 PRIVACY.md。签名不能验证已被篡改页面的数据真实性。\n')]]]
 ];
 const hashes=[];
 for(const [name,entries] of bundles) {

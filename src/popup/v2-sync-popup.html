@@ -2,7 +2,7 @@
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ChatGPT → OpenViking</title><link rel="stylesheet" href="v2-sync-popup.css"></head>
 <body><main>
-<header><div><h1>ChatGPT → OpenViking</h1><small id="version">V2 · 同步状态</small></div><button id="settings">设置</button></header>
+<header><div><h1>ChatGPT → OpenViking</h1><small id="version">同步状态</small></div><button id="settings">设置</button></header>
 <section class="card" id="hero" data-tone="neutral" aria-live="polite">
  <p id="conversation" class="conversation">当前会话</p>
  <h2><span class="dot" aria-hidden="true"></span><span id="headline">正在读取状态…</span></h2>
@@ -10,13 +10,13 @@
  <div class="metrics"><div class="metric"><strong id="collected">—</strong><span>本机已采集</span></div><div class="metric"><strong id="confirmed">—</strong><span>远端已确认</span></div><div class="metric"><strong id="queued">—</strong><span>等待上传确认</span></div></div>
 </section>
 <section class="card"><h3 id="history-title">历史范围</h3><p id="history-detail">等待状态返回后判断。</p>
- <div class="next"><h3>你现在需要做什么</h3><p id="next">暂时无需操作。</p></div>
+ <div class="next"><h3>操作建议</h3><p id="next">暂时无需操作。</p></div>
 </section>
 <div class="actions"><button id="reload" disabled>刷新页面补录</button><button id="retry" disabled>重试上传</button></div>
 <p id="notice" role="status"></p>
 <p id="filtered" hidden></p>
-<section id="warnings" class="warnings" aria-label="需要注意" hidden></section>
+<section id="warnings" class="warnings" aria-label="内容与同步说明" hidden></section>
 <dl><dt>最近采集</dt><dd id="observed">—</dd><dt>最近远端确认</dt><dd id="synced">—</dd><dt id="retry-label" hidden>计划重试</dt><dd id="retry-time" hidden>—</dd></dl>
 <details><summary>诊断详情</summary><pre id="status">尚未读取</pre></details>
-<p class="footnote">仅同步自然详情响应中的支持消息 · 非逐轮实时 · 跨设备尽力去重</p>
+<p class="footnote">同步已加载的支持消息，不保证逐轮实时更新。跨设备同步存在并发重复的可能。</p>
 </main><script src="../shared/sync-status.js"></script><script src="v2-sync-popup.js"></script></body></html>

@@ -21,6 +21,7 @@ test('history only describes latest response; false flags never prove full histo
  const completePage=present({messageCount:6,lastPage:{hasPreviousPage:false,hasNextPage:false}});
  assert.match(completePage.history.detail,/不是完整历史证明/);assert.match(completePage.next,/不需要/);
  assert.match(present({lastPage:{hasNextPage:true}}).history.title,/后续/);
+ assert.match(present({messageCount:6,lastPage:{hasNextPage:true}}).next,/无需重复操作/);
  assert.match(present({lastPage:{}}).history.title,/不确定/);
 });
 test('errors, missing acknowledgements and excluded nodes cannot masquerade as clean green',()=>{
@@ -50,4 +51,22 @@ test('badge changes stale success to warning on store failure; event bursts are 
  const badge=create({chrome,statusModel:model,setTimer:()=>++timers,clearTimer:()=>{},readStatus:async()=>{if(failed)throw Error();return {configured:true,enabled:true,conversation:{messageCount:2}};}});
  await badge.refresh();failed=true;await badge.refresh();assert.equal(calls.at(-1).text,'!');
  badge.schedule();badge.schedule();badge.schedule();assert.equal(timers,1);badge.dispose();
+});
+test('zero accepted messages distinguish a received response from no capture',()=>{
+ const v=present({lastObservedAt:123,lastNodeCount:5,messageCount:0,captureSummary:{unsupported:1,tools:1,thoughts:1}});
+ assert.equal(v.key,'no_eligible');assert.match(v.title,/已收到/);assert.match(v.detail,/5 个/);
+ assert.equal(v.tone,'warn');assert.equal(v.canRetry,false);
+ assert.equal(present().key,'waiting');
+ assert.equal(present({lastObservedAt:123,lastNodeCount:0}).key,'no_eligible');
+});
+test('partially captured multimodal text stays visibly incomplete across later pages',()=>{
+ const v=present({messageCount:1,captureSummary:{partialText:1},hasPartialContentHistory:true});
+ assert.equal(v.key,'synced');assert.equal(v.tone,'warn');assert.match(v.warnings[0],/仅保留文字/);
+ const later=present({messageCount:2,captureSummary:{partialText:0},hasPartialContentHistory:true});
+ assert.equal(later.tone,'warn');assert.match(later.warnings[0],/未同步/);
+});
+test('missing pagination privacy context has actionable fail-closed status',()=>{
+ const v=present({messageCount:10},{captureError:{error:'pagination_context_missing'}});
+ assert.equal(v.key,'capture_error');assert.match(v.title,/缺少会话验证/);assert.match(v.next,/再刷新/);
+ assert.match(v.detail,/隐私保护未入库/);
 });

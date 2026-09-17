@@ -28,7 +28,7 @@ export const publicFiles = [...new Set([
   'README.md','LICENSE','SECURITY.md','PRIVACY.md','CONTRIBUTING.md','.gitignore',
   'package.json','package-lock.json',
   '.github/workflows/ci.yml','.github/ISSUE_TEMPLATE/bug_report.md','.github/pull_request_template.md',
-  'docs/public/ARCHITECTURE.md','docs/public/TESTING.md','docs/public/RELEASING.md',
+  'docs/public/ARCHITECTURE.md','docs/public/TESTING.md','docs/public/RELEASING.md','docs/public/RELEASE-1.0.0.md',
   'src/diagnostics/p0-server-test.html','src/diagnostics/p0-server-test.js',
   'poc/reconcile-snapshot.js',
   'poc/chrome-capture/README.md','poc/chrome-capture/manifest.json',
@@ -38,7 +38,7 @@ export const publicFiles = [...new Set([
   'test/core.test.js','test/state-store.test.js','test/openviking-client.test.js',
   'test/p0-capture.test.js','test/p0-reconcile.test.js','test/p0-server-test.test.js',
   'test/message-store.test.js','test/v2-worker.test.js','test/v2-sync.test.js','test/v2-integration.test.js',
-  'test/sync-status.test.js','test/v2-popup.test.js',
+  'test/sync-status.test.js','test/v2-popup.test.js','test/v2-pagination.test.js',
   'scripts/build-v2-preview.mjs','scripts/build-v2.mjs','scripts/validate-extension.mjs',
   'scripts/release-files.mjs','scripts/audit-public.mjs','scripts/package-release.mjs',
   'scripts/release.test.mjs'

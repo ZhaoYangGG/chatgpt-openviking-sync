@@ -96,7 +96,8 @@
           }
         }
         const captureSummary={system:detail.counts?.system||0,hidden:detail.counts?.hidden||0,internal:detail.counts?.internal||0,
-          tools:0,thoughts:0,nonFinal:0,unsupported:0};
+          tools:0,thoughts:0,nonFinal:0,unsupported:0,
+          partialText:detail.messages.filter(m=>m.partialContent===true).length};
         for(const item of detail.omissions||[]){
           if(item.role==='tool')captureSummary.tools++;
           else if(item.type==='thoughts')captureSummary.thoughts++;
@@ -104,6 +105,8 @@
           else captureSummary.unsupported++;
         }
         Object.assign(c,{title:detail.title,lastObservedAt:observedAt,lastPage:detail.pageInfo,captureSummary,
+          lastNodeCount:detail.nodeCount??detail.messages.length,
+          hasPartialContentHistory:c.hasPartialContentHistory===true||captureSummary.partialText>0,
           unsupportedCount:detail.omissions?.length||0,fullHistoryVerified:false,
           hasUnsupportedHistory:c.hasUnsupportedHistory===true||detail.returnedPageSupported!==true,
           collectionStatus:detail.returnedPageSupported?'observed_range':'unsupported_content'});

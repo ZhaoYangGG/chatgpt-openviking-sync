@@ -2,12 +2,12 @@
 importScripts('../shared/core.js','../shared/source-time.js','../capture/parser.js','../capture/signed-bridge.js',
  '../shared/sync-status.js','status-badge.js','capture-auth.js','message-store.js','openviking-client.js','reconcile.js','sync-engine.js');
 const store=new OpenVikingMessageStore.MessageStore();
-const CONFIG='ov_v2_config',CHANNELS='ov_v2_channels';
+const CONFIG='ov_v2_config',CHANNELS='ov_v2_channels',CAPTURE_ERRORS='v2SyncCaptureErrors';
 const ready=Promise.all([
  chrome.storage.local.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'}),
  chrome.storage.session.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'})
 ]);
-let captureChain=Promise.resolve(),captureQueued=0,flushPromise=null;
+let captureChain=Promise.resolve(),diagnosticChain=Promise.resolve(),captureQueued=0,flushPromise=null;
 const badges=chrome.action&&chrome.tabs?OpenVikingStatusBadge.create({chrome,statusModel:OpenVikingSyncStatus,readStatus:status}):null;
 const updateSync=store.updateSync.bind(store);
 store.updateSync=async(...args)=>{const result=await updateSync(...args);badges?.schedule();return result;};
@@ -15,7 +15,7 @@ chrome.tabs?.onActivated?.addListener(()=>badges?.schedule());
 chrome.tabs?.onUpdated?.addListener((_id,change)=>{if(change.url||change.status==='complete')badges?.schedule();});
 chrome.tabs?.onRemoved?.addListener(()=>badges?.schedule());
 chrome.storage.onChanged?.addListener((changes,area)=>{
- if(area==='local'&&['ov_v2_config','v2SyncLastCapture','v2SyncCaptureError'].some(k=>k in changes))badges?.schedule();
+ if(area==='local'&&['ov_v2_config','v2SyncLastCapture',CAPTURE_ERRORS].some(k=>k in changes))badges?.schedule();
 });
 badges?.schedule();
 async function getConfig(){
@@ -31,8 +31,27 @@ function allowed(c){return c.enabled&&c.serverUrl&&c.sourceTrustAccepted&&c.lega
 function pageSender(sender){try{return sender.frameId===0&&Number.isInteger(sender.tab?.id)&&!!sender.documentId&&new URL(sender.url).origin==='https://chatgpt.com';}catch{return false;}}
 const trusted=(sender,page)=>sender.url===chrome.runtime.getURL(page);
 async function channels(){return (await chrome.storage.session.get(CHANNELS))[CHANNELS]||{};}
-async function initialize(sender){
+function senderConversation(sender){
+ try{return new URL(sender.url).pathname.match(/^\/(?:g\/[^/]+\/)?c\/([a-zA-Z0-9_-]{1,160})\/?$/)?.[1]||null;}catch{return null;}
+}
+// Diagnostics are bounded and isolated by destination and conversation. A success
+// in B must not hide A's failure, nor may A's error paint every tab as failed.
+function captureDiagnostic(context,error){
+ if(!context.scope||!context.id)return Promise.resolve();
+ const job=diagnosticChain.then(async()=>{
+  const entries=(await chrome.storage.local.get(CAPTURE_ERRORS))[CAPTURE_ERRORS]||{};
+  const key=JSON.stringify([context.scope,context.id]);
+  if(error)entries[key]={error,stage:context.stage,step:context.step,at:Date.now()};
+  else delete entries[key];
+  const keys=Object.keys(entries).sort((a,b)=>entries[b].at-entries[a].at);
+  for(const key of keys.slice(128))delete entries[key];
+  await chrome.storage.local.set({[CAPTURE_ERRORS]:entries});
+ });
+ diagnosticChain=job.catch(()=>{});return job;
+}
+async function initialize(sender,diagnostic){
  await ready;
+ diagnostic.step='channel_storage';
  const entries=await channels(),key=sender.documentId;
  let entry=entries[key];
  if(!entry||entry.tabId!==sender.tab.id){
@@ -42,26 +61,53 @@ async function initialize(sender){
   for(const id of ids.slice(128))delete entries[id];
   await chrome.storage.session.set({[CHANNELS]:entries});
  }
+ diagnostic.step='install_bridge';
  const result=await chrome.scripting.executeScript({target:{tabId:sender.tab.id,documentIds:[sender.documentId]},
   world:'MAIN',injectImmediately:true,func:OpenVikingSignedBridge.install,args:[entry.secret,entry.channel]});
  if(!result.some(r=>r.result==='installed'||r.result==='already_installed'))throw Error('bridge_install_failed');
  return {ok:true};
 }
-async function capture(message,sender){
+async function capture(message,sender,diagnostic){
  await ready;
+ diagnostic.step='authenticate';
  const entries=await channels(),entry=entries[sender.documentId];
  if(entry?.tabId!==sender.tab.id||!await OpenVikingCaptureAuth.verify(message,entry))return {ok:false,error:'capture_auth_failed'};
  entry.lastSeq=message.seq;await chrome.storage.session.set({[CHANNELS]:entries});
  const c=await getConfig(),scope=await scopeOf(c);
+ diagnostic.scope=scope;diagnostic.step='parse_envelope';
  const payload=JSON.parse(message.text);
  if(!OpenVikingDetailParser.isId(payload.id))throw Error('invalid_capture');
+ diagnostic.id=payload.id;
  if(payload.error){
-  await chrome.storage.local.set({v2SyncCaptureError:{error:'capture_failed_or_limit',at:Date.now()}});
+  await captureDiagnostic(diagnostic,'capture_failed_or_limit');
   return {ok:false};
  }
- const detail=OpenVikingDetailParser.parseText(payload.body,payload.id);
+ const kind=payload.kind||'detail';
+ if(!['detail','page'].includes(kind))throw Error('invalid_capture_kind');
+ // Keep privacy attestations in trusted session storage, never in page messages
+ // or persistent IDB. They survive worker suspension but not a browser restart.
+ // Map keys are prefixed to avoid prototype-property collisions on source IDs.
+ const contexts=entry.contexts||{},contextKey='c:'+payload.id;
+ const priorContext=contexts[contextKey];
+ if(kind==='detail'){
+  delete contexts[contextKey];entry.contexts=contexts;
+  await chrome.storage.session.set({[CHANNELS]:entries});
+ }
+ const context=priorContext?.scope===scope?priorContext:null;
+ diagnostic.step='parse_response';
+ const detail=OpenVikingDetailParser.parseText(payload.body,payload.id,{kind,context});
+ if(detail.excluded)delete contexts[contextKey];
+ else if(kind==='detail'){
+  // Bounded per-document cache. An evicted context fails closed until a fresh detail.
+  delete contexts[contextKey];
+  contexts[contextKey]={conversationId:payload.id,privacyAllowed:true,title:detail.title,scope};
+  for(const key of Object.keys(contexts).slice(0,-32))delete contexts[key];
+ }
+ entry.contexts=contexts;await chrome.storage.session.set({[CHANNELS]:entries});
+ diagnostic.step='store_messages';
  const result=await store.ingest(scope,detail);
  if(!detail.excluded){
+  diagnostic.step='legacy_mapping';
   // Import only the old Session mapping from this installation and matching destination.
   const old=await chrome.storage.local.get(['ov_config','ov_sync_state']);
   const prior=old.ov_config;
@@ -69,7 +115,9 @@ async function capture(message,sender){
    const sid=old.ov_sync_state?.conversations?.[payload.id]?.sessionId;
    if(typeof sid==='string'&&/^[a-zA-Z0-9_-]{1,160}$/.test(sid))await store.updateSync(scope,payload.id,{sessionId:sid});
   }
-  await chrome.storage.local.set({v2SyncLastCapture:{id:payload.id,at:Date.now()},v2SyncCaptureError:null});
+  diagnostic.step='save_status';
+  await chrome.storage.local.set({v2SyncLastCapture:{id:payload.id,at:Date.now()}});
+  await captureDiagnostic(diagnostic,null);
   void flush();
  }
  return {ok:true,...result};
@@ -96,9 +144,9 @@ async function flush(force=false,idFilter){
 }
 async function status(id){
  const c=await getConfig(),scope=await scopeOf(c),conversation=id?await store.getConversation(scope,id):null;
- const small=await chrome.storage.local.get(['v2SyncLastCapture','v2SyncCaptureError']);
+ const small=await chrome.storage.local.get(['v2SyncLastCapture',CAPTURE_ERRORS]);
  return {ok:true,configured:!!c.serverUrl,enabled:allowed(c),conversation:conversation||null,
-  lastCapture:small.v2SyncLastCapture||null,captureError:small.v2SyncCaptureError||null,mode:'best_effort'};
+  lastCapture:small.v2SyncLastCapture||null,captureError:small[CAPTURE_ERRORS]?.[JSON.stringify([scope,id])]||null,mode:'best_effort'};
 }
 async function save(input){
  const rawUrl=new URL(input.serverUrl);
@@ -134,21 +182,39 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{
   return true;
  }
  if(!pageSender(sender))return false;
+ const diagnostic={id:senderConversation(sender),scope:null,stage:m?.type==='V2_INIT'?'initialize':'capture',step:'configuration'};
+ const reportBacklog=()=>{
+  void getConfig().then(scopeOf).then(scope=>captureDiagnostic({...diagnostic,scope},'capture_backlog_limit')).catch(()=>{});
+ };
  if(m?.type==='V2_RELAY_ERROR'){
-  void chrome.storage.local.set({v2SyncCaptureError:{error:'capture_backlog_limit',at:Date.now()}});reply({ok:true});return false;
+  reportBacklog();reply({ok:true});return false;
  }
  if(!['V2_INIT','V2_SIGNED_CAPTURE'].includes(m?.type))return false;
  if(captureQueued>=4){
-  void chrome.storage.local.set({v2SyncCaptureError:{error:'capture_backlog_limit',at:Date.now()}});
+  reportBacklog();
   reply({ok:false,error:'capture_backlog_limit'});return false;
  }
  captureQueued++;
- const job=captureChain.then(()=>m.type==='V2_INIT'?initialize(sender):capture(m,sender));
+ const job=captureChain.then(async()=>{
+  diagnostic.scope=await scopeOf(await getConfig());
+  return m.type==='V2_INIT'?initialize(sender,diagnostic):capture(m,sender,diagnostic);
+ });
  captureChain=job.catch(()=>{});
- job.then(reply,()=>{
-  void chrome.storage.local.set({v2SyncCaptureError:{error:'capture_or_storage_failed',at:Date.now()}});
-  reply({ok:false,error:'capture_or_storage_failed'});
+ const response=job.then(reply,async error=>{
+  // Only fixed classifications may enter diagnostics; never persist raw exception
+  // messages (JSON errors can contain private response fragments).
+  const known=['pagination_context_missing','conversation_id_mismatch','unsupported_schema','invalid_message',
+   'invalid_or_duplicate_id','capture_limit','json_depth_limit','duplicate_json_key','invalid_json',
+   'storage_capacity_reached','transaction_aborted','invalid_scope','invalid_messages','invalid_message_identity',
+   'bridge_install_failed','invalid_capture','invalid_capture_kind'];
+  const names=['QuotaExceededError','DataError','TransactionInactiveError','UnknownError','AbortError','TypeError','ReferenceError','SyntaxError'];
+  const reason=known.includes(error?.message)?error.message:names.includes(error?.name)?error.name:'capture_or_storage_failed';
+  await captureDiagnostic(diagnostic,reason).catch(()=>{});
+  reply({ok:false,error:reason});
  }).finally(()=>captureQueued--);
+ // Keep error persistence in the capture ordering: a later success must not be
+ // overwritten by a delayed failure record from an earlier capture.
+ captureChain=response.catch(()=>{});
  return true;
 });
 chrome.alarms.onAlarm.addListener(alarm=>{if(alarm.name==='ov-v2-retry')void flush();});

@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-openviking-webextension",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "private": true,
   "description": "Chrome extension for observed ChatGPT conversation sync with source timestamps and best-effort deduplication.",
   "scripts": {

@@ -27,19 +27,24 @@
       if (m.metadata?.is_visually_hidden_from_conversation === true) { counts.hidden++; continue; }
       if (['model_editable_context','reasoning_recap'].includes(type)) { counts.internal++; continue; }
       const omit = reason => { counts[reason]++; omissions.push({index,id:small(m.id),role:small(role),type:small(type),reason}); };
-      if (!['user','assistant'].includes(role) || type !== 'text') { omit('unsupported'); continue; }
+      const mixedUser = role === 'user' && type === 'multimodal_text';
+      if (!['user','assistant'].includes(role) || (type !== 'text' && !mixedUser)) { omit('unsupported'); continue; }
       if (role === 'assistant' && (m.channel !== 'final' || m.end_turn !== true
           || m.status !== 'finished_successfully' || m.metadata?.is_complete !== true
           || ![null,undefined,'all'].includes(m.recipient))) { omit('incomplete'); continue; }
       if (role === 'user' && m.status !== 'finished_successfully') { omit('incomplete'); continue; }
       if (!isId(m.id) || ids.has(m.id)) throw new Error('invalid_or_duplicate_id');
-      if (!Array.isArray(m.content.parts) || m.content.parts.some(p => typeof p !== 'string')) { omit('unsupported'); continue; }
+      if (!Array.isArray(m.content.parts) || (!mixedUser && m.content.parts.some(p => typeof p !== 'string'))) { omit('unsupported'); continue; }
+      // Only literal text segments are accepted. Never serialize asset pointers,
+      // captions, tool output or unknown nested multimodal objects as user text.
+      const parts = m.content.parts.filter(p => typeof p === 'string');
       // Preserve original parts, whitespace and source order. Never sort by time.
-      const text = m.content.parts.join('');
+      const text = parts.join('');
       if (!text.trim()) { omit('unsupported'); continue; }
       ids.add(m.id);
       messages.push({id:m.id, sourceMessageId:`chatgpt:${expectedId}:${m.id}`, role,
-        parts:[...m.content.parts], content:text, sourceIndex:index,
+        parts, content:text, sourceIndex:index, contentType:type,
+        partialContent:mixedUser, omittedPartCount:m.content.parts.length-parts.length,
         createTime:time(m.create_time), createTimeDecimal:time(m.create_time) === null ? null : String(m.create_time),
         updateTime:time(m.update_time), updateTimeDecimal:time(m.update_time) === null ? null : String(m.update_time),
         actualModel:small(m.metadata?.resolved_model_slug),
@@ -54,7 +59,7 @@
       excluded:false,createTime:time(data.create_time),updateTime:time(data.update_time),
       defaultModel:small(data.default_model_slug),currentNode:small(data.current_node),
       nodeCount:data.messages.length,messages,omissions,counts,pageInfo,
-      returnedPageSupported:omissions.length === 0,
+      returnedPageSupported:omissions.length === 0 && !messages.some(m=>m.partialContent),
       scope:'observed_response_only',fullHistoryVerified:false};
   }
   function compareDom(apiIds, domIds) {
@@ -64,14 +69,29 @@
       conclusion:dom.size === 0 ? 'no_dom_ids' : [...dom].every(id=>api.has(id))
         ? 'all_current_dom_ids_match_api_subset' : 'differences_need_review'};
   }
-  function parseText(body,expectedId){
+  function parsePage(data,expectedId,context){
+    if (!isId(expectedId) || !data || typeof data !== 'object'
+        || ('conversation_id' in data && data.conversation_id !== expectedId)) throw new Error('conversation_id_mismatch');
+    // This context is supplied only by the worker, from an authenticated full
+    // detail in this same document and destination scope. A page cannot grant it.
+    if (context?.conversationId !== expectedId || context.privacyAllowed !== true) throw new Error('pagination_context_missing');
+    for (const field of ['is_temporary_chat','is_do_not_remember']) {
+      if (field in data && data[field] !== false) return {conversationId:expectedId,excluded:true,
+        reason:data[field]===true?'privacy_excluded':'privacy_unknown',messages:[]};
+    }
+    return parseDetail({...data,conversation_id:expectedId,
+      is_temporary_chat:false,is_do_not_remember:false,title:context.title},expectedId);
+  }
+  function parseText(body,expectedId,options={}){
     const clock=globalThis.OpenVikingSourceTime||(typeof require==='function'?require('../shared/source-time'):null);
-    const {data,times}=clock.parseExact(body),result=parseDetail(data,expectedId);
+    if (!['detail','page'].includes(options.kind||'detail')) throw new Error('invalid_capture_kind');
+    const {data,times}=clock.parseExact(body),result=options.kind==='page'
+      ? parsePage(data,expectedId,options.context) : parseDetail(data,expectedId);
     for(const m of result.messages){
       m.createTimeDecimal=times.get(m.sourceIndex+':create_time')??null;
       m.updateTimeDecimal=times.get(m.sourceIndex+':update_time')??null;
     }
     return result;
   }
-  return {parseDetail,parseText,compareDom,isId};
+  return {parseDetail,parsePage,parseText,compareDom,isId};
 });

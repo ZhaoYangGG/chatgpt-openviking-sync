@@ -25,11 +25,12 @@
     try{
       if(String(init?.method||input?.method||'GET').toUpperCase()!=='GET')return null;
       const url=new URL(typeof input==='string'||input instanceof URL?String(input):input.url,location.href);
-      const match=url.pathname.match(/^\/backend-api\/(?:conversations|conversation)\/([a-zA-Z0-9_-]{1,160})\/?$/);
-      return url.origin==='https://chatgpt.com'&&match?match[1]:null;
+      const match=url.pathname.match(/^\/backend-api\/(?:conversations|conversation)\/([a-zA-Z0-9_-]{1,160})(\/messages)?\/?$/);
+      return url.origin==='https://chatgpt.com'&&match?{id:match[1],kind:match[2]?'page':'detail'}:null;
     }catch{return null;}
   }
-  async function observe(response,id){
+  async function observe(response,target){
+    const {id,kind}=target;
     if(!response.ok||!/\bjson\b/i.test(response.headers.get('content-type')||'')){emit({id,error:'not_successful_json'});return;}
     if(active>=2||Number(response.headers.get('content-length'))>2097152){emit({id,error:'capture_limit'});return;}
     active++;let reader,timer,expired=false;
@@ -40,7 +41,7 @@
       for(;;){const {done,value}=await reader.read();if(expired)throw Error('timeout');if(done)break;
         bytes+=value.byteLength;if(bytes>2097152){void reader.cancel().catch(()=>{});throw Error('limit');}
         chunks.push(decoder.decode(value,{stream:true}));}
-      chunks.push(decoder.decode());emit({id,body:chunks.join('')});
+      chunks.push(decoder.decode());emit({id,kind,body:chunks.join('')});
     }catch{emit({id,error:'capture_failed_or_limit'});}
     finally{clearTimeout(timer);active--;}
   }

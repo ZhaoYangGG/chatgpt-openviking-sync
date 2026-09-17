@@ -11,7 +11,7 @@ function harness(initial){
   document:{hidden:false,getElementById:id=>elements[id],createElement:()=>({textContent:''})},window:{addEventListener(){}},
   setTimeout:f=>{timers.set(++n,f);return n;},clearTimeout:id=>timers.delete(id),setInterval:f=>{interval=f;return 1;},clearInterval(){},confirm:()=>confirmation,
   chrome:{tabs:{query:async()=>[tab],get:async()=>tab,reload:async()=>{reloads++;}},
-   runtime:{getManifest:()=>({version:'0.2.2'}),openOptionsPage:async()=>{},sendMessage:async m=>{sent.push(m);return m.type==='V2_RETRY'?{ok:true}:response;}}}});
+   runtime:{getManifest:()=>({version:require('../manifest.v2.json').version}),openOptionsPage:async()=>{},sendMessage:async m=>{sent.push(m);return m.type==='V2_RETRY'?{ok:true}:response;}}}});
  vm.runInContext(source,context);
  return {elements,timers,tab,sent,get reloads(){return reloads;},setResponse:r=>{response=r;},tick:()=>interval(),confirm:()=>{confirmation=true;}};
 }
@@ -35,4 +35,15 @@ test('popup retry reports request, not success; refresh requires confirmation an
  await h.elements.reload.onclick();assert.equal(h.reloads,0);
  h.confirm();h.tab.url='https://chatgpt.com/c/another';await h.elements.reload.onclick();await settle();assert.equal(h.reloads,0);
  h.tab.url='https://chatgpt.com/c/c1';h.tick();await settle();await h.elements.reload.onclick();await settle();assert.equal(h.reloads,1);
+});
+test('production surfaces use release version and actionable safe configuration errors',async()=>{
+ const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,{addEventListener(){}});return nodes.get(id);};
+ const c=vm.createContext({URL,Error,String,document:{getElementById:get},chrome:{runtime:{sendMessage:async()=>({ok:false,error:'operation_failed'})}}});
+ vm.runInContext(fs.readFileSync(require.resolve('../src/options/v2-options.js'),'utf8'),c);
+ assert.match(c.readableError('HTTP_401'),/API Key/);assert.match(c.readableError('HTTP_404'),/基础地址/);
+ assert.match(c.readableError('HTTP_503'),/503/);assert.equal(c.readableError('DO_NOT_EXPORT_SECRET').includes('DO_NOT_EXPORT_SECRET'),false);
+ for(const file of ['../manifest.v2.json','../src/options/v2-options.html','../src/popup/v2-sync-popup.html'])
+  assert.doesNotMatch(fs.readFileSync(require.resolve(file),'utf8'),/beta|测试版|采集层预览|V2 同步设置/i);
+ const h=harness({ok:true,configured:true,enabled:true});await settle();
+ assert.equal(h.elements.version.textContent,'V'+require('../manifest.v2.json').version+' · 同步状态');
 });

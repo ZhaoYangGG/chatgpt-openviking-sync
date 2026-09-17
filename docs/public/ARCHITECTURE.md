@@ -8,6 +8,14 @@ ISOLATED relay 在 document_start 请求后台初始化。后台将随机文档�
 
 注入发生在异步初始化后，可能错过已经完成的早期请求；不能保证每次首屏都采到。刷新和后续自然响应可补录。MAIN 环境本身被攻陷时签名也不能证明网络真实性，见安全说明。
 
+## 历史分页与图文文字
+
+0.2.3 的 GET 白名单接收精确的 `/backend-api/(conversation|conversations)/<id>` 及其 `/messages` 路径，不接收任意子路径。签名载荷包含从请求路径推导的 kind（detail/page），不转发查询参数。分页保留原数组顺序和时间数字文本，仍按来源 ID 入库去重。
+
+完整详情通过身份、隐私和结构校验后，Worker 在文档 channel 的可信 session storage 中保留会话隐私上下文（含 scope 和标题，每文档最多 32 个）。分页缺少 conversation_id/隐私字段时只可绑定该上下文；错误 ID、不同文档/目的地或无上下文均不能继承。详情隐私不明或分页显式拒绝时撤销上下文。跨页按首次观察顺序追加，不改写远端日志；分页不抹去标题。
+
+用户 multimodal_text 仅接纳 parts 中的字符串，标记 partialContent 和非文本段数；不序列化对象，不接受 tool/assistant multimodal 作为最终文字。纯图片仍被过滤。状态摘要区分未收到、零可接纳、部分内容未同步；后续纯文本页不消除图文缺失提示。
+
 ## 精确时间
 
 source-time.parseExact 在 JSON 语法验证后遍历受限深度 token，提取 messages 数组对应时间数字文本，拒绝重复 JSON key。解析结果保留数值与原始数字文本。

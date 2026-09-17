@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT to OpenViking",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "minimum_chrome_version": "111",
   "description": "Sync observed ChatGPT text conversations to OpenViking with source timestamps and best-effort deduplication.",
   "permissions": [
@@ -23,7 +23,7 @@
   },
   "action": {
     "default_popup": "src/popup/v2-sync-popup.html",
-    "default_title": "ChatGPT → OpenViking V2"
+    "default_title": "ChatGPT → OpenViking"
   },
   "options_ui": {
     "page": "src/options/v2-options.html"

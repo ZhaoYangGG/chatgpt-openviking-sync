@@ -74,7 +74,7 @@ test('V2 IDB: latest capture classification separates internal filters from unsu
  d.omissions=[{role:'tool',type:'text',reason:'unsupported'},{role:'assistant',type:'thoughts',reason:'unsupported'},
   {role:'assistant',type:'text',reason:'incomplete'},{role:'user',type:'multimodal_text',reason:'unsupported'}];
  d.returnedPageSupported=false;await s.ingest('scope',d);
- assert.deepEqual((await s.getConversation('scope','c1')).captureSummary,{system:1,hidden:2,internal:3,tools:1,thoughts:1,nonFinal:1,unsupported:1});
+ assert.deepEqual((await s.getConversation('scope','c1')).captureSummary,{system:1,hidden:2,internal:3,tools:1,thoughts:1,nonFinal:1,unsupported:1,partialText:0});
  await s.ingest('scope',detail());const c=await s.getConversation('scope','c1');
  assert.equal(c.captureSummary.unsupported,0);assert.equal(c.hasUnsupportedHistory,true);assert.equal(c.messageCount,2);
 });
